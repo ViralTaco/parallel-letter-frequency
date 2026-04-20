@@ -16,3 +16,4 @@ bench/cmake_install.cmake
 bench/parallel-letter-frequency
 build/
 cmake_install.cmake
+parallel-letter-frequency
