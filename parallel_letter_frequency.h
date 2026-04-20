@@ -1,11 +1,13 @@
 #pragma once /// Copyright 2026 viraltaco_ <https://viraltaco.com>
 #ifndef vt_parallel_letter_frequency
-#define vt_parallel_letter_frequency "com.viraltaco.letter-frequency v" "1.1.6"
+#define vt_parallel_letter_frequency "com.viraltaco.letter-frequency v" "1.2.1"
 
 #include <numeric>     // std::transform_reduce
 #include <string_view> // std::string_view
 #include <valarray>    // std::valarray
+#include <array>       // std::array
 #include <vector>      // std::vector
+#include <algorithm>   // std::for_each
 
 #ifndef __APPLE__
 #include <execution>
@@ -14,7 +16,7 @@
 #define PAR_UNSEQ
 #endif
 
-namespace parallel_letter_frequency::inline v1_1_7 {
+namespace parallel_letter_frequency::inline v1_2_1 {
 class frequency {
 public:
   using string_view = typename std::string_view;
@@ -41,19 +43,24 @@ public:
     static constexpr auto alpha = [](auto c) noexcept { return lower(c) or upper(c); };
     /// P: c is an ascii letter.
     /// R: The lexographic index (starting from 0 for 'a', ignoring case).
-    [[nodiscard]] static constexpr
-    auto index_of(const unsigned char c) noexcept -> size_type {
-      enum: size_type { kOffsetUpper = 'A', kOffsetLower = 'a' };
-      return c - (upper(c) ? kOffsetUpper : kOffsetLower);
+    [[nodiscard]] static constexpr auto index_of(const auto k) noexcept -> size_type {
+      static constexpr auto kLookupTable = [] {
+        auto arr = std::array<unsigned char, 128>{};
+        for (auto&& c: arr) {
+          if      (lower(c)) c = c - 'a';
+          else if (upper(c)) c = c - 'A';
+          else               c = 0x7F;
+        }
+        return arr;
+      }();
+      return kLookupTable[k & 0x7F];
     }
 
   public:
     // MARK: Rule of Five
     frequency_map() noexcept = default;
 
-    explicit frequency_map(const string_view str) noexcept {
-      this->insert(str);
-    }
+    explicit frequency_map(const string_view str) noexcept { insert(str); }
 
     frequency_map(frequency_map &&map) noexcept = default;
     frequency_map &operator=(frequency_map &&map) noexcept = default;
@@ -68,9 +75,9 @@ public:
     [[nodiscard]] auto empty() const noexcept -> bool { return self.max() == 0zu; }
 
     auto insert(const string_view str) noexcept -> void {
-      for (const auto k: str) {
-        if (alpha(k)) { self[index_of(static_cast<unsigned char>(k))] += 1zu; }
-      }
+      std::for_each(PAR_UNSEQ str.cbegin(), str.cend(), [this](unsigned char k) {
+        if (alpha(k)) { self[index_of(k)] += 1zu; }
+      });
     }
 
     auto operator +=(frequency_map const& other) noexcept -> frequency_map& {
@@ -97,9 +104,9 @@ public:
   [[nodiscard]] auto empty() const noexcept -> bool { return self.empty(); }
   [[nodiscard]] auto operator [](const key_type k) const { return self[k]; }
 };
-}  // namespace parallel_letter_frequency::inline v1_1_7
+}  // namespace parallel_letter_frequency::inline v1_2_1
 
 namespace parallel_letter_frequency {
-  namespace latest = v1_1_7;
+  namespace latest = v1_2_1;
 } // namespace parallel_letter_frequency
 #endif  // ndef vt_parallel_letter_frequency
