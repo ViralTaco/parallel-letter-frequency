@@ -1,6 +1,6 @@
 #pragma once /// Copyright 2026 viraltaco_ <https://viraltaco.com>
 #ifndef vt_parallel_letter_frequency
-#define vt_parallel_letter_frequency "com.viraltaco.letter-frequency v" "1.2.1"
+#define vt_parallel_letter_frequency "com.viraltaco.letter-frequency v" "1.2.4"
 
 #include <numeric>     // std::transform_reduce
 #include <string_view> // std::string_view
@@ -16,7 +16,7 @@
 #define PAR_UNSEQ
 #endif
 
-namespace parallel_letter_frequency::inline v1_2_1 {
+namespace parallel_letter_frequency::inline v1_2_4 {
 class frequency {
 public:
   using string_view = typename std::string_view;
@@ -46,10 +46,10 @@ public:
     [[nodiscard]] static constexpr auto index_of(const auto k) noexcept -> size_type {
       static constexpr auto kLookupTable = [] {
         auto arr = std::array<unsigned char, 128>{};
-        for (auto&& c: arr) {
-          if      (lower(c)) c = c - 'a';
-          else if (upper(c)) c = c - 'A';
-          else               c = 0x7F;
+        for (unsigned char c{}; c != 0x80; ++c) {
+          if (lower(c))      arr[c] = c - 'a';
+          else if (upper(c)) arr[c] = c - 'A';
+          else               arr[c] = 0x7F;
         }
         return arr;
       }();
@@ -75,7 +75,7 @@ public:
     [[nodiscard]] auto empty() const noexcept -> bool { return self.max() == 0zu; }
 
     auto insert(const string_view str) noexcept -> void {
-      std::for_each(PAR_UNSEQ str.cbegin(), str.cend(), [this](unsigned char k) {
+      std::for_each(str.cbegin(), str.cend(), [this](unsigned char k) {
         if (alpha(k)) { self[index_of(k)] += 1zu; }
       });
     }
@@ -104,9 +104,9 @@ public:
   [[nodiscard]] auto empty() const noexcept -> bool { return self.empty(); }
   [[nodiscard]] auto operator [](const key_type k) const { return self[k]; }
 };
-}  // namespace parallel_letter_frequency::inline v1_2_1
+}  // namespace parallel_letter_frequency::inline v1_2_4
 
 namespace parallel_letter_frequency {
-  namespace latest = v1_2_1;
+  namespace latest = v1_2_4;
 } // namespace parallel_letter_frequency
 #endif  // ndef vt_parallel_letter_frequency
