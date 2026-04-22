@@ -20,6 +20,7 @@ add_executable(benchmark_parallel_letter_frequency
     includes/v1_1_5/parallel_letter_frequency.cpp   # v1.1.5
     includes/v1_1_6/parallel_letter_frequency.cpp   # v1.1.6
     includes/v1_2_4/parallel_letter_frequency.cpp   # v1.2.4
+    includes/v2_0_0/parallel_letter_frequency.cpp   # v2.0.0
     ../parallel_letter_frequency.cpp                # latest
 )
 target_compile_options(benchmark_parallel_letter_frequency PRIVATE -DNDEBUG -Wall -Wextra -O3)
