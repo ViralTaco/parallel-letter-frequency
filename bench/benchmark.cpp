@@ -14,6 +14,7 @@
 #include "includes/v1_1_6/parallel_letter_frequency.h"
 #include "includes/v1_2_4/parallel_letter_frequency.h"
 #include "includes/v2_0_0/parallel_letter_frequency.h"
+#include "includes/v2_1_1/parallel_letter_frequency.h"
 
 
 static constexpr auto kRangeMultiplier = 10zu;
@@ -59,9 +60,11 @@ struct ParallelLetterFrequencyFixture : public benchmark::Fixture {
       ->RangeMultiplier(kRangeMultiplier)                                \
       ->Range(kRangeMin, kRangeMax)
 
-REGISTER_PL_BENCHMARK(v1_1_5); // baseline
-REGISTER_PL_BENCHMARK(v2_0_0);
+REGISTER_PL_BENCHMARK(v2_0_0); // baseline
+REGISTER_PL_BENCHMARK(v2_1_1);
 REGISTER_PL_BENCHMARK(latest);
+// slower than v2_0_0
+// REGISTER_PL_BENCHMARK(v1_1_5); // (old) baseline
 // slower than v1_1_5
 //REGISTER_PL_BENCHMARK(exercism);
 //REGISTER_PL_BENCHMARK(v1_1_1);
