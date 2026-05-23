@@ -1,66 +1,91 @@
-# Parallel Letter Frequency
+# Parallel Letter Frequency: High-Performance C++ Implementation
 
-Welcome to Parallel Letter Frequency on Exercism's C++ Track.
-If you need help running the tests or submitting your code, check out `HELP.md`.
+A state-of-the-art, highly optimized C++ implementation for counting letter frequencies in text views in parallel. This project demonstrates extreme optimization techniques at both the software concurrency level and the hardware CPU/microarchitecture level, with a primary focus on Apple Silicon (macOS) and modern multicore processors.
 
-## Instructions
+---
 
-Count the frequency of letters in texts using parallel computation.
+## 1. Architectural Approach
 
-Parallelism is about doing things in parallel that can also be done sequentially.
-A common example is counting the frequency of letters.
-Employ parallelism to calculate the total frequency of each letter in a list of texts.
+The solution implements a **high-throughput, memory-resident Map-Reduce** model tailored to modern CPU cache and execution pipeline architectures:
 
-## Additional Notes for C++ Implementation
+### Concurrency & Dynamic Load Balancing
+*   **Asymmetric Core Optimization:** Apple Silicon utilizes heterogeneous architectures with Performance (P) and Efficiency (E) cores. Static workload partitioning causes slower E-cores to bottleneck the overall execution (straggler effect). 
+*   **Dynamic Work-Stealing/Granular Scheduling:** Instead of static chunking, worker threads dynamically query a global atomic index (`std::atomic<size_t>`) to acquire work in small batches (e.g., 16 strings). This balances the scheduler's atomic overhead with the hardware's heterogeneous processing speed, maximizing multi-core throughput.
 
-There are several ways how to achieve parallelism in C++.
-Exercism's online runner supports C++17, so you can use execution policies from the [algorithms library][algorithm].
-Another option is manually managing [threads][thread].
-However, note that spawning a thread is quite expensive (using a [thread pool][pool] would help).
+### Memory & Cache Line Optimization
+*   **False Sharing Elimination:** In multi-threaded environments, threads writing to adjacent memory addresses residing on the same cache line force CPU cache-coherency cycles (invalidating lines across L1/L2 caches). The local thread accumulators (`frequency_map`) are aligned to the CPU's specific L1 cache line size using `alignas(VT_CACHE_LINE)` (128 bytes on Apple Silicon, 64 bytes on x86_64).
+*   **Memory Bandwidth Utilization:** The main loop avoids unnecessary heap allocation or locking. Threads process strings entirely in registers or L1 cache, aggregating results into thread-local maps, and perform a single lock-free reduction at the end.
 
-When working locally, you can of course use whatever you want.
-However, a solution using non-standard libraries will most probably not work with the Exercism online runner.
+### Microarchitectural Instruction Pipelining
+*   **Branchless Lookup Table (LUT):** Character classification (`[A-Za-z]`) and folding are performed branchlessly in $O(1)$ time. This prevents CPU pipeline stalls caused by branch mispredictions.
+*   **4-Way Loop Unrolling:** The fallback scalar loop is unrolled four times to expose instruction-level parallelism (ILP) to the CPU out-of-order execution engine, saturating the multiple arithmetic logic units (ALUs).
 
-### Benchmark
+### Hardware-Accelerated Vectorization (Apple Silicon)
+*   **Apple Accelerate vImage Integration:** On macOS, the implementation utilizes the native `vImageHistogramCalculation_Planar8` function. This leverages the hardware's vector units (NEON and Apple's proprietary AMX coprocessor) to count all 256 byte values directly at/near memory bandwidth (~15–30 GB/s), bypassing scalar loop instructions entirely.
 
-When working locally, you can optionally run a benchmark to get an idea about the speedup of different implementations.
-Activating the CMake flag `EXERCISM_INCLUDE_BENCHMARK` enables the benchmark:
+---
+
+## 2. Evolution of Versions
+
+The codebase contains several historical iterations, allowing performance comparison:
+
+1.  **`exercism` / `v1.x.x` (Baseline):** Standard C++ map-reduce using associative containers (`std::map`), which suffers from node allocation overheads, pointer chasing, and heavy locking/synchronization.
+2.  **`v2.0.0` & `v2.1.1`:** Shift to contiguous array-based frequency tables (`std::array<size_t, 32>`) and branchless ASCII LUTs. Introduces parallel algorithms (`std::transform_reduce` with execution policies).
+3.  **`v3.0.0` (`latest` root baseline):** Introduces cache-line alignment to prevent false sharing and 4-way scalar loop unrolling to maximize pipeline occupancy.
+4.  **`v3.1.0_M1` (Apple Silicon Optimized):** Integrates the Apple Accelerate framework for hardware-accelerated histogram calculation and uses atomic-based dynamic load-balancing for asymmetric cores.
+
+---
+
+## 3. How to Build
+
+The project uses CMake as its build system. A modern compiler supporting C++23 is recommended.
+
+### Prerequisites
+
+*   **macOS:** The Accelerate framework is included natively with macOS. If you wish to build with TBB (Threading Building Blocks) for standard parallel execution policies, install it via Homebrew:
+    ```bash
+    brew install tbb
+    ```
+*   **Linux:** Install the Threading Building Blocks library:
+    ```bash
+    sudo apt-get install libtbb-dev
+    ```
+
+### Compilation
+
+Create a build directory, configure CMake, and compile the targets:
+
+```bash
+# Configure with tests and benchmarks enabled
+cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DEXERCISM_RUN_ALL_TESTS=ON -DEXERCISM_INCLUDE_BENCHMARK=ON
+
+# Compile the project
+cmake --build build
 ```
-cmake -DEXERCISM_RUN_ALL_TESTS=1 -DEXERCISM_INCLUDE_BENCHMARK=1 .
+
+---
+
+## 4. How to Run
+
+### Running Unit Tests
+To run the Catch2-based test suite and verify implementation correctness:
+```bash
+./build/parallel-letter-frequency
 ```
 
-### Compiler support for parallel algorithms
+### Running Benchmarks
+To run the microbenchmarks comparing the latest implementation against historical baselines:
+```bash
+# Navigate to the benchmark folder and compile
+cmake -B bench/build -S bench/ -DCMAKE_BUILD_TYPE=Release
+cmake --build bench/build
 
-GCC's implementation of the C++ standard library (`libstdc++`) relies on [TBB][tbb].
-If TBB is not available, a fall back to a sequential version will be used, even when parallel execution is requested.
-
-On Ubuntu, you need to install the `libtbb-dev` package:
-```
-apt-get install libtbb-dev
-```
-
-On macOS, you can use [Homebrew][homebrew] to install TBB:
-```
-brew install tbb
+# Execute Google Benchmark
+./bench/build/benchmark_parallel_letter_frequency
 ```
 
-Clang `libc++` as of version 17 has experimental, partial support for parallel algorithms.
-To switch it on, the `-fexperimental-library` compiler flags needs to be given.
+---
 
-Apple Clang 15 and earlier _do not_ support parallel algorithms.
+## 5. Performance Explainer
 
-On Linux and macOS we recommend using GCC (along with the default `libstdc++`) for this exercise.
-
-Microsoft's MSVC supports parallel algorithms at least since VS 2017 15.7 without having to install any additional library.
-
-[algorithm]: https://en.cppreference.com/w/cpp/algorithm
-[thread]: https://en.cppreference.com/w/cpp/thread/thread
-[pool]: https://en.wikipedia.org/wiki/Thread_pool
-[tbb]: https://en.wikipedia.org/wiki/Threading_Building_Blocks
-[homebrew]: https://brew.sh/
-
-## Source
-
-### Created by
-
-- @ahans
+For a deep dive into the microarchitectural analysis of C++20 coroutines, dynamic allocator bottlenecks, register-spilling, and detailed benchmark plots, refer to the [explainer.md](file:///Users/viraltaco_/Exercism/cpp/parallel-letter-frequency/explainer.md) document in the workspace root.

@@ -53,6 +53,10 @@ if("${CMAKE_CXX_COMPILER_ID}" MATCHES "(GNU|Clang)")
     )
 endif()
 
+if(APPLE)
+    target_link_libraries(${exercise} PRIVATE "-framework Accelerate")
+endif()
+
 if(${EXERCISM_INCLUDE_BENCHMARK})
     target_compile_definitions(${exercise} PRIVATE EXERCISM_INCLUDE_BENCHMARK CATCH_CONFIG_ENABLE_BENCHMARKING)
 endif()

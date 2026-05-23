@@ -22,6 +22,7 @@ add_executable(benchmark_parallel_letter_frequency
     includes/v1_2_4/parallel_letter_frequency.cpp   # v1.2.4
     includes/v2_0_0/parallel_letter_frequency.cpp   # v2.0.0
     includes/v2_1_1/parallel_letter_frequency.cpp   # v2.1.1
+    includes/v3_1_0~M1/parallel_letter_frequency.cpp # v3_1_0~M1
     ../parallel_letter_frequency.cpp                # latest
 )
 target_compile_options(benchmark_parallel_letter_frequency PRIVATE -DNDEBUG -Wall -Wextra -O3 -march=native)
@@ -33,4 +34,8 @@ if("${CMAKE_CXX_COMPILER_ID}" MATCHES "(GNU|Clang)")
     if (TBB_FOUND)
         target_link_libraries(benchmark_parallel_letter_frequency PRIVATE TBB::tbb)
     endif()
+endif()
+
+if(APPLE)
+    target_link_libraries(benchmark_parallel_letter_frequency PRIVATE "-framework Accelerate")
 endif()

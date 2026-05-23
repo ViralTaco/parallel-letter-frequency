@@ -15,12 +15,15 @@
 #include "includes/v1_2_4/parallel_letter_frequency.h"
 #include "includes/v2_0_0/parallel_letter_frequency.h"
 #include "includes/v2_1_1/parallel_letter_frequency.h"
+#include "includes/v3_1_0~M1/parallel_letter_frequency.h"
 
+/// MARK: Config 
+static constexpr auto kRangeMultiplier = 8zu;
+static constexpr auto kRangeMin = 1zu << kRangeMultiplier;         // 1 << 10 = 1 024
+static constexpr auto kRangeMax = kRangeMin << kRangeMultiplier;   // 1 024 << 10  = 1 048 576
+static constexpr auto kNumString = 1024;
 
-static constexpr auto kRangeMultiplier = 10zu;
-static constexpr auto kRangeMin = 1zu << kRangeMultiplier;         // 1 << 10 = 1024
-static constexpr auto kRangeMax = kRangeMin << kRangeMultiplier;   // 1024 << 10  = 1 048 576
-static constexpr auto kNumString = 100;
+/// MARK: Fixture
 struct ParallelLetterFrequencyFixture : public benchmark::Fixture {
  public:
   std::vector<std::string> texts;
@@ -47,7 +50,7 @@ struct ParallelLetterFrequencyFixture : public benchmark::Fixture {
   }
 };
 
-
+/// MARK: Register macro
 #define REGISTER_PL_BENCHMARK(version)                                   \
   BENCHMARK_DEFINE_F(ParallelLetterFrequencyFixture, version)            \
   (benchmark::State & state) {                                           \
@@ -60,17 +63,24 @@ struct ParallelLetterFrequencyFixture : public benchmark::Fixture {
       ->RangeMultiplier(kRangeMultiplier)                                \
       ->Range(kRangeMin, kRangeMax)
 
-REGISTER_PL_BENCHMARK(v2_0_0); // baseline
-REGISTER_PL_BENCHMARK(v2_1_1);
-REGISTER_PL_BENCHMARK(latest);
-// slower than v2_0_0
-// REGISTER_PL_BENCHMARK(v1_1_5); // (old) baseline
-// slower than v1_1_5
-//REGISTER_PL_BENCHMARK(exercism);
-//REGISTER_PL_BENCHMARK(v1_1_1);
-//REGISTER_PL_BENCHMARK(v1_1_6);
-//REGISTER_PL_BENCHMARK(v1_2_4);
+/// MARK: Benchmarks
+REGISTER_PL_BENCHMARK(latest); // latest baseline
+REGISTER_PL_BENCHMARK(v3_1_0_M1);
 
+///MARK: slower than v3_0_0
+REGISTER_PL_BENCHMARK(v2_0_0); // (second) baseline
+REGISTER_PL_BENCHMARK(v2_1_1);
+
+///MARK: slower than v2_0_0
+REGISTER_PL_BENCHMARK(v1_1_5); // (old) baseline
+
+///MARK: slower than v1_1_5
+REGISTER_PL_BENCHMARK(exercism);
+REGISTER_PL_BENCHMARK(v1_1_1);
+REGISTER_PL_BENCHMARK(v1_1_6);
+REGISTER_PL_BENCHMARK(v1_2_4);
+
+/// MARK: UNDEFINE Register macro
 #undef REGISTER_PL_BENCHMARK
 
 BENCHMARK_MAIN();
